@@ -13,6 +13,7 @@ Proyecto audiovisual para **Instituto Jorge Robledo · Taller de Matemáticas 8.
 2. `Factorizacion8SolucionesPasoAPaso`
    - Solución explícita de los siete ejercicios diagnósticos y el reto.
    - Identificación del caso, transformación, factorización y verificación.
+   - Dos posiciones fijas para los pasos activos, evitando colisiones con la verificación y el pie de página.
 
 ## Entorno de entrega
 
