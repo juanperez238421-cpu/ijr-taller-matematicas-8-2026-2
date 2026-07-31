@@ -25,6 +25,7 @@ Proyecto audiovisual para **Instituto Jorge Robledo · Taller de Matemáticas 8.
 - MP4 H.264, pixel format yuv420p.
 - El workflow de esta rama publica los MP4 nativos de ManimCE antes de la normalización final.
 - La entrega final incorpora `ffprobe`, decodificación integral, fotogramas de inspección y SHA-256.
+- PR marcado como listo para activar la validación final.
 
 ## Prueba local
 
