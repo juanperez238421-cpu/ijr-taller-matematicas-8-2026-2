@@ -119,16 +119,24 @@ class Factorizacion8PresentacionEjercicios'''
           S_SRC="$(find media -type f -name 'Factorizacion8SolucionesPasoAPaso.mp4' | sort | tail -n 1)"
           test -s "$P_SRC" && test -s "$S_SRC"
 
-          VIDEO_FILTER="scale=1920:1080:flags=lanczos,setsar=1"
+          # Manim may round a logical 16:9 frame to 1918x1080. Convert to
+          # exactly 1920x1080 and force yuv420p inside the filter graph.
+          # A single x264 worker avoids encoder initialization failures on
+          # CI runners exposing a very high logical CPU count.
+          VIDEO_FILTER="scale=1920:1080:flags=lanczos,format=yuv420p,setsar=1"
 
           ffmpeg -y -i "$P_SRC" \
-            -vf "$VIDEO_FILTER" -r 30 \
-            -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart \
+            -vf "$VIDEO_FILTER" -fps_mode cfr -r 30 \
+            -c:v libx264 -preset medium -crf 20 \
+            -profile:v high -level:v 4.1 -pix_fmt yuv420p -threads:v 1 \
+            -movflags +faststart \
             delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4
 
           ffmpeg -y -i "$S_SRC" \
-            -vf "$VIDEO_FILTER" -r 30 \
-            -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart \
+            -vf "$VIDEO_FILTER" -fps_mode cfr -r 30 \
+            -c:v libx264 -preset medium -crf 20 \
+            -profile:v high -level:v 4.1 -pix_fmt yuv420p -threads:v 1 \
+            -movflags +faststart \
             delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4
 
           ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 > delivery/ffprobe_presentacion.txt
@@ -174,7 +182,7 @@ class Factorizacion8PresentacionEjercicios'''
           Docker image: manimcommunity/manim:v0.20.1
           Resolution: 1920x1080
           Frame rate: 30 fps
-          Codec normalization: H.264 / yuv420p
+          Codec normalization: H.264 / yuv420p / one encoder thread
           Layout safety: two fixed solution-step slots
           JR_FAST_MODE=0
           JR_REAL_TIMER=0
