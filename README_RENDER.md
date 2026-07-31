@@ -25,6 +25,7 @@ Proyecto audiovisual para **Instituto Jorge Robledo · Taller de Matemáticas 8.
 - MP4 H.264, pixel format yuv420p.
 - Normalización final explícita a 1920 × 1080 para evitar redondeos internos del marco lógico 16:9.
 - Conversión de color dentro del filtro y codificación H.264 con un hilo para estabilidad en CI.
+- La entrega incorpora `ffprobe`, decodificación integral, fotogramas de inspección y SHA-256.
 
 ## Prueba local
 
