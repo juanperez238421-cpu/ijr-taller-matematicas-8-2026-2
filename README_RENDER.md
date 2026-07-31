@@ -22,6 +22,7 @@ Proyecto audiovisual para **Instituto Jorge Robledo · Taller de Matemáticas 8.
 - 30 fps.
 - Fondo blanco.
 - MP4 H.264, pixel format yuv420p.
+- Normalización final explícita a 1920 × 1080 para evitar redondeos internos del marco lógico 16:9.
 
 ## Prueba local
 
