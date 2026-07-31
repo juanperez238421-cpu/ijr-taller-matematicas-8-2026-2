@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - .github/workflows/render_factorizacion8_delivery.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - factorizacion_8_dos_videos.py
+      - README_RENDER.md
   workflow_dispatch:
 
 permissions:
