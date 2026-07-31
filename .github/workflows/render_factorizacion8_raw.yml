@@ -1,0 +1,134 @@
+name: Render Factorizacion 8 Raw Manim
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout pull request
+        uses: actions/checkout@v4
+
+      - name: Apply collision-safe solution layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("factorizacion_8_dos_videos.py")
+          source = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"    def show_step_stack\(.*?\n        return visible\n\n\nclass Factorizacion8PresentacionEjercicios",
+              re.DOTALL,
+          )
+          replacement = '''    def show_step_stack(self, steps: Sequence[tuple[str, str]], center: np.ndarray = ORIGIN, max_width: float = 8.7, equation_size: float = 40, wait_after: float = 0.75) -> VGroup:
+              """Show the two most recent steps in fixed, collision-safe slots."""
+              visible = VGroup()
+              left_anchor = center + LEFT * max_width / 2
+              upper_slot = center + UP * 0.65
+              lower_slot = center + DOWN * 0.75
+
+              for index, (caption, tex) in enumerate(steps, start=1):
+                  badge = self.badge(f"Paso {index}", color=BLUE_D, size=22)
+                  caption_obj = self.txt(caption, size=26, color=MUTED)
+                  eq = self.mx(tex, size=equation_size, color=INK)
+                  self.fit(eq, max_width)
+                  row = VGroup(badge, caption_obj).arrange(RIGHT, buff=0.18)
+                  block = VGroup(row, eq).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
+
+                  if len(visible) == 0:
+                      block.move_to(upper_slot).align_to(left_anchor, LEFT)
+                  elif len(visible) == 1:
+                      block.move_to(lower_slot).align_to(left_anchor, LEFT)
+                  else:
+                      old = visible[0]
+                      survivor = visible[1]
+                      survivor_target = survivor.copy().move_to(upper_slot).align_to(left_anchor, LEFT)
+                      self.play(FadeOut(old, shift=UP * 0.12), run_time=0.30)
+                      self.play(Transform(survivor, survivor_target), run_time=0.42)
+                      visible = VGroup(survivor)
+                      block.move_to(lower_slot).align_to(left_anchor, LEFT)
+
+                  self.play(FadeIn(row, shift=RIGHT * 0.10), Write(eq), run_time=0.90)
+                  visible.add(block)
+                  self.hold(wait_after)
+
+              return visible
+
+
+class Factorizacion8PresentacionEjercicios'''
+          patched, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f"Expected one layout function; found {count}")
+          path.write_text(patched, encoding="utf-8")
+          PY
+
+      - name: Validate Python source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile factorizacion_8_dos_videos.py
+
+      - name: Pull ManimCE 0.20.1
+        shell: bash
+        run: docker pull manimcommunity/manim:v0.20.1
+
+      - name: Render presentation and solutions with literal -pqh
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp/manim-home \
+            -e JR_FAST_MODE=0 \
+            -e JR_REAL_TIMER=0 \
+            -v "$PWD:/manim" \
+            -w /manim \
+            --entrypoint bash \
+            manimcommunity/manim:v0.20.1 \
+            -c '
+              set -euo pipefail
+              mkdir -p /tmp/manim-bin
+              printf "#!/usr/bin/env bash\nexit 0\n" > /tmp/manim-bin/xdg-open
+              chmod +x /tmp/manim-bin/xdg-open
+              export PATH="/tmp/manim-bin:$PATH"
+
+              manim -pqh factorizacion_8_dos_videos.py Factorizacion8PresentacionEjercicios \
+                --format=mp4 --disable_caching 2>&1 | tee render_presentacion.log
+
+              manim -pqh factorizacion_8_dos_videos.py Factorizacion8SolucionesPasoAPaso \
+                --format=mp4 --disable_caching 2>&1 | tee render_soluciones.log
+            '
+
+      - name: Collect native Manim outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p raw_delivery
+          P_SRC="$(find media -type f -name 'Factorizacion8PresentacionEjercicios.mp4' | sort | tail -n 1)"
+          S_SRC="$(find media -type f -name 'Factorizacion8SolucionesPasoAPaso.mp4' | sort | tail -n 1)"
+          test -s "$P_SRC"
+          test -s "$S_SRC"
+          cp "$P_SRC" raw_delivery/Factorizacion8PresentacionEjercicios_raw.mp4
+          cp "$S_SRC" raw_delivery/Factorizacion8SolucionesPasoAPaso_raw.mp4
+          cp factorizacion_8_dos_videos.py README_RENDER.md render_presentacion.log render_soluciones.log raw_delivery/
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 raw_delivery/Factorizacion8PresentacionEjercicios_raw.mp4 > raw_delivery/ffprobe_presentacion_raw.txt
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 raw_delivery/Factorizacion8SolucionesPasoAPaso_raw.mp4 > raw_delivery/ffprobe_soluciones_raw.txt
+          sha256sum raw_delivery/*.mp4 raw_delivery/factorizacion_8_dos_videos.py > raw_delivery/SHA256SUMS_RAW.txt
+
+      - name: Upload native render artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Factorizacion8-Raw-Manim-Render
+          path: raw_delivery/
+          if-no-files-found: error
+          retention-days: 14
