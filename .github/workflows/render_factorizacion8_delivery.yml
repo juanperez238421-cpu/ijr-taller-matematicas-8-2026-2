@@ -25,6 +25,62 @@ jobs:
         with:
           ref: render/factorizacion8-two-videos-20260731
 
+      - name: Apply final layout safety patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("factorizacion_8_dos_videos.py")
+          source = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"    def show_step_stack\(.*?\n        return visible\n\n\nclass Factorizacion8PresentacionEjercicios",
+              re.DOTALL,
+          )
+          replacement = '''    def show_step_stack(self, steps: Sequence[tuple[str, str]], center: np.ndarray = ORIGIN, max_width: float = 8.7, equation_size: float = 40, wait_after: float = 0.75) -> VGroup:
+              """Show the two most recent steps in fixed, collision-safe slots."""
+              visible = VGroup()
+              left_anchor = center + LEFT * max_width / 2
+              upper_slot = center + UP * 0.65
+              lower_slot = center + DOWN * 0.75
+
+              for index, (caption, tex) in enumerate(steps, start=1):
+                  badge = self.badge(f"Paso {index}", color=BLUE_D, size=22)
+                  caption_obj = self.txt(caption, size=26, color=MUTED)
+                  eq = self.mx(tex, size=equation_size, color=INK)
+                  self.fit(eq, max_width)
+                  row = VGroup(badge, caption_obj).arrange(RIGHT, buff=0.18)
+                  block = VGroup(row, eq).arrange(DOWN, aligned_edge=LEFT, buff=0.16)
+
+                  if len(visible) == 0:
+                      block.move_to(upper_slot).align_to(left_anchor, LEFT)
+                  elif len(visible) == 1:
+                      block.move_to(lower_slot).align_to(left_anchor, LEFT)
+                  else:
+                      old = visible[0]
+                      survivor = visible[1]
+                      survivor_target = survivor.copy().move_to(upper_slot).align_to(left_anchor, LEFT)
+                      self.play(FadeOut(old, shift=UP * 0.12), run_time=0.30)
+                      self.play(Transform(survivor, survivor_target), run_time=0.42)
+                      visible = VGroup(survivor)
+                      block.move_to(lower_slot).align_to(left_anchor, LEFT)
+
+                  self.play(FadeIn(row, shift=RIGHT * 0.10), Write(eq), run_time=0.90)
+                  visible.add(block)
+                  self.hold(wait_after)
+
+              return visible
+
+
+class Factorizacion8PresentacionEjercicios'''
+          patched, count = pattern.subn(replacement, source, count=1)
+          if count != 1:
+              raise SystemExit(f"Layout patch expected one function, found {count}")
+          path.write_text(patched, encoding="utf-8")
+          PY
+
       - name: Validate source
         run: |
           set -euo pipefail
@@ -63,8 +119,6 @@ jobs:
           S_SRC="$(find media -type f -name 'Factorizacion8SolucionesPasoAPaso.mp4' | sort | tail -n 1)"
           test -s "$P_SRC" && test -s "$S_SRC"
 
-          # Manim can round a 16:9 logical frame to 1918x1080. Normalize
-          # explicitly to the requested 1920x1080 before H.264/yuv420p encoding.
           VIDEO_FILTER="scale=1920:1080:flags=lanczos,setsar=1"
 
           ffmpeg -y -i "$P_SRC" \
@@ -121,6 +175,7 @@ jobs:
           Resolution: 1920x1080
           Frame rate: 30 fps
           Codec normalization: H.264 / yuv420p
+          Layout safety: two fixed solution-step slots
           JR_FAST_MODE=0
           JR_REAL_TIMER=0
           Scene 1: Factorizacion8PresentacionEjercicios
