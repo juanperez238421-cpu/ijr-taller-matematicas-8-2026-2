@@ -28,6 +28,7 @@ Proyecto audiovisual para **Instituto Jorge Robledo · Taller de Matemáticas 8.
 - La entrega incorpora `ffprobe`, decodificación integral, fotogramas de inspección y SHA-256.
 - Ejecución final vinculada al PR técnico de control de calidad.
 - El workflow remoto entrega primero los MP4 nativos; la normalización final se ejecuta fuera del runner.
+- Sincronización final del artefacto nativo iniciada desde el PR 4.
 
 ## Prueba local
 
