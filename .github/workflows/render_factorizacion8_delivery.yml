@@ -62,10 +62,31 @@ jobs:
           P_SRC="$(find media -type f -name 'Factorizacion8PresentacionEjercicios.mp4' | sort | tail -n 1)"
           S_SRC="$(find media -type f -name 'Factorizacion8SolucionesPasoAPaso.mp4' | sort | tail -n 1)"
           test -s "$P_SRC" && test -s "$S_SRC"
-          ffmpeg -y -i "$P_SRC" -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4
-          ffmpeg -y -i "$S_SRC" -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4
+
+          # Manim can round a 16:9 logical frame to 1918x1080. Normalize
+          # explicitly to the requested 1920x1080 before H.264/yuv420p encoding.
+          VIDEO_FILTER="scale=1920:1080:flags=lanczos,setsar=1"
+
+          ffmpeg -y -i "$P_SRC" \
+            -vf "$VIDEO_FILTER" -r 30 \
+            -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart \
+            delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4
+
+          ffmpeg -y -i "$S_SRC" \
+            -vf "$VIDEO_FILTER" -r 30 \
+            -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart \
+            delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4
+
           ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 > delivery/ffprobe_presentacion.txt
           ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4 > delivery/ffprobe_soluciones.txt
+          grep -q '^codec_name=h264$' delivery/ffprobe_presentacion.txt
+          grep -q '^width=1920$' delivery/ffprobe_presentacion.txt
+          grep -q '^height=1080$' delivery/ffprobe_presentacion.txt
+          grep -q '^pix_fmt=yuv420p$' delivery/ffprobe_presentacion.txt
+          grep -q '^codec_name=h264$' delivery/ffprobe_soluciones.txt
+          grep -q '^width=1920$' delivery/ffprobe_soluciones.txt
+          grep -q '^height=1080$' delivery/ffprobe_soluciones.txt
+          grep -q '^pix_fmt=yuv420p$' delivery/ffprobe_soluciones.txt
           ffmpeg -v error -i delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 -f null -
           ffmpeg -v error -i delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4 -f null -
 
