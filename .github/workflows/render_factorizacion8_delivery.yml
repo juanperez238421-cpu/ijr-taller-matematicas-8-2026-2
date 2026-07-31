@@ -1,0 +1,114 @@
+name: Render Factorizacion 8 Delivery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/render_factorizacion8_delivery.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout isolated render branch
+        uses: actions/checkout@v4
+        with:
+          ref: render/factorizacion8-two-videos-20260731
+
+      - name: Validate source
+        run: |
+          set -euo pipefail
+          python -m py_compile factorizacion_8_dos_videos.py
+
+      - name: Pull official ManimCE image
+        run: docker pull manimcommunity/manim:v0.20.1
+
+      - name: Render both scenes with literal -pqh
+        run: |
+          set -euo pipefail
+          mkdir -p delivery frames
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp/manim-home \
+            -e JR_FAST_MODE=0 \
+            -e JR_REAL_TIMER=0 \
+            -v "$PWD:/manim" \
+            -w /manim \
+            --entrypoint bash \
+            manimcommunity/manim:v0.20.1 \
+            -c '
+              set -euo pipefail
+              mkdir -p /tmp/manim-bin
+              printf "#!/usr/bin/env bash\nexit 0\n" > /tmp/manim-bin/xdg-open
+              chmod +x /tmp/manim-bin/xdg-open
+              export PATH="/tmp/manim-bin:$PATH"
+              manim -pqh factorizacion_8_dos_videos.py Factorizacion8PresentacionEjercicios --format=mp4 --disable_caching 2>&1 | tee render_presentacion.log
+              manim -pqh factorizacion_8_dos_videos.py Factorizacion8SolucionesPasoAPaso --format=mp4 --disable_caching 2>&1 | tee render_soluciones.log
+            '
+
+      - name: Normalize and verify MP4 files
+        run: |
+          set -euo pipefail
+          P_SRC="$(find media -type f -name 'Factorizacion8PresentacionEjercicios.mp4' | sort | tail -n 1)"
+          S_SRC="$(find media -type f -name 'Factorizacion8SolucionesPasoAPaso.mp4' | sort | tail -n 1)"
+          test -s "$P_SRC" && test -s "$S_SRC"
+          ffmpeg -y -i "$P_SRC" -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4
+          ffmpeg -y -i "$S_SRC" -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p -movflags +faststart delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 > delivery/ffprobe_presentacion.txt
+          ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,pix_fmt -show_entries format=duration,size -of default=noprint_wrappers=1 delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4 > delivery/ffprobe_soluciones.txt
+          ffmpeg -v error -i delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 -f null -
+          ffmpeg -v error -i delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4 -f null -
+
+      - name: Extract inspection frames
+        run: |
+          set -euo pipefail
+          P=delivery/Factorizacion8_Presentacion_Detallada_Ejercicios.mp4
+          S=delivery/Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4
+          pdur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$P")"
+          sdur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$S")"
+          pmid="$(awk -v d="$pdur" 'BEGIN {printf "%.3f", d/2}')"
+          smid="$(awk -v d="$sdur" 'BEGIN {printf "%.3f", d/2}')"
+          pend="$(awk -v d="$pdur" 'BEGIN {printf "%.3f", d-6}')"
+          send="$(awk -v d="$sdur" 'BEGIN {printf "%.3f", d-6}')"
+          ffmpeg -y -ss 8 -i "$P" -frames:v 1 frames/presentacion_inicio.png
+          ffmpeg -y -ss "$pmid" -i "$P" -frames:v 1 frames/presentacion_mitad.png
+          ffmpeg -y -ss "$pend" -i "$P" -frames:v 1 frames/presentacion_final.png
+          ffmpeg -y -ss 8 -i "$S" -frames:v 1 frames/soluciones_inicio.png
+          ffmpeg -y -ss "$smid" -i "$S" -frames:v 1 frames/soluciones_mitad.png
+          ffmpeg -y -ss "$send" -i "$S" -frames:v 1 frames/soluciones_final.png
+
+      - name: Package delivery
+        run: |
+          set -euo pipefail
+          cp factorizacion_8_dos_videos.py README_RENDER.md render_presentacion.log render_soluciones.log delivery/
+          cp -r frames delivery/frames
+          cat > delivery/RENDER_INFO.txt <<'INFO'
+          Project: Factorizacion 8 - two educational videos
+          Date: 2026-07-31
+          Manim Community Edition: 0.20.1
+          Docker image: manimcommunity/manim:v0.20.1
+          Resolution: 1920x1080
+          Frame rate: 30 fps
+          Codec normalization: H.264 / yuv420p
+          JR_FAST_MODE=0
+          JR_REAL_TIMER=0
+          Scene 1: Factorizacion8PresentacionEjercicios
+          Scene 2: Factorizacion8SolucionesPasoAPaso
+          INFO
+          (cd delivery && sha256sum Factorizacion8_Presentacion_Detallada_Ejercicios.mp4 Factorizacion8_Soluciones_Senior_Paso_a_Paso.mp4 factorizacion_8_dos_videos.py > SHA256SUMS.txt)
+          zip -r Factorizacion8_Dos_Videos_Entrega.zip delivery
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Factorizacion8-Dos-Videos-Entrega
+          path: |
+            delivery/
+            Factorizacion8_Dos_Videos_Entrega.zip
+          if-no-files-found: error
+          retention-days: 14
