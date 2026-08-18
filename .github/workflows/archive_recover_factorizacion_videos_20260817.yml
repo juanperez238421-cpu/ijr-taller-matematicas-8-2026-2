@@ -22,10 +22,10 @@ jobs:
           rm -rf media delivery
           mkdir -p delivery
           for SCENE in Factorizacion8PresentacionEjercicios Factorizacion8SolucionesPasoAPaso; do
-            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp/manim-home -v "$PWD:/manim" -w /manim --entrypoint bash manimcommunity/manim:v0.20.1 -c "manim -pqh factorizacion_8_dos_videos.py $SCENE --format=mp4 --disable_caching --fps 30"
+            docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp/manim-home -v "$PWD:/manim" -w /manim --entrypoint bash manimcommunity/manim:v0.20.1 -c "manim -qh factorizacion_8_dos_videos.py $SCENE --format=mp4 --disable_caching --fps 30"
             SRC="$(find media -type f -name "${SCENE}.mp4" ! -path '*/partial_movie_files/*' | head -1)"
             test -n "$SRC" && test -s "$SRC"
-            if [ "$SCENE" = Factorizacion8PresentacionEjercicios ]; then OUT='delivery/2026-07-31__Factorizacion_presentacion_y_pretest.mp4'; else OUT='delivery/2026-07-31__Factorizacion_soluciones_paso_a_paso.mp4'; fi
+            if [ "$SCENE" = Factorizacion8PresentacionEjercicios ]; then OUT='delivery/2026-07-31__Factorizacion_presentacion_y_ejercicios.mp4'; else OUT='delivery/2026-07-31__Factorizacion_soluciones_paso_a_paso.mp4'; fi
             cp "$SRC" "$OUT"
             docker run --rm --user "$(id -u):$(id -g)" -e F="$OUT" -v "$PWD:/manim" -w /manim --entrypoint bash manimcommunity/manim:v0.20.1 -c 'ffmpeg -nostdin -v error -i "$F" -f null -'
           done
