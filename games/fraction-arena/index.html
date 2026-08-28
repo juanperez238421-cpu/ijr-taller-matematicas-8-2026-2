@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#090b12" />
+  <meta name="description" content="Fraction Arena - live Grade 8 algebra battle game." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Fraction Arena | Math Workshop 8</title>
+</head>
+<body>
+  <div class="network-strip" id="networkStrip" role="status" aria-live="polite">
+    <span class="network-dot"></span>
+    <span id="networkText">Checking connection…</span>
+  </div>
+
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="../../" aria-label="Back to Math Workshop 8">
+        <img src="../../assets/logo_ijr.svg" alt="Instituto Jorge Robledo" />
+        <div>
+          <span class="eyebrow">Math Workshop 8</span>
+          <strong>FRACTION ARENA</strong>
+        </div>
+      </a>
+      <div class="server-chip" id="serverChip">SERVER · READY</div>
+    </header>
+
+    <section id="joinView" class="join-view">
+      <div class="hero-card">
+        <div class="hero-copy">
+          <span class="kicker">LIVE TEAM BATTLE</span>
+          <h1>Solve. Charge. Attack.</h1>
+          <p>Every correct answer gives your team attack energy. During the battle phase, choose another team and strike — or spend your energy on defense.</p>
+          <div class="rule-grid">
+            <div><strong>45 s</strong><span>Solve</span></div>
+            <div><strong>14 s</strong><span>Battle</span></div>
+            <div><strong>12</strong><span>Rounds</span></div>
+            <div><strong>100 HP</strong><span>Base</span></div>
+          </div>
+        </div>
+
+        <form id="joinForm" class="join-card" autocomplete="off">
+          <h2>Enter the arena</h2>
+          <label>
+            Team name
+            <input id="teamName" maxlength="40" placeholder="Example: Algebra Titans" required />
+          </label>
+          <label>
+            Class
+            <select id="groupCode" required>
+              <option value="">Choose your class</option>
+              <option value="8A">8A</option>
+              <option value="8B">8B</option>
+              <option value="8C">8C</option>
+            </select>
+          </label>
+          <label>
+            Game code
+            <input id="joinCode" maxlength="12" inputmode="latin" autocapitalize="characters" placeholder="Example: FIGHT8" value="FIGHT8" required />
+          </label>
+          <button class="primary-btn" id="joinButton" type="submit">JOIN BATTLE</button>
+          <p class="microcopy">At least two teams are required. Once a second team joins, the server starts a 20-second lobby countdown.</p>
+          <div class="message" id="joinMessage" aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="gameView" class="game-view hidden">
+      <div class="battle-hud">
+        <div class="identity-block">
+          <span class="eyebrow" id="roomLabel">ROOM</span>
+          <h2 id="teamLabel">Team</h2>
+        </div>
+        <div class="hud-stat hp-stat">
+          <span>HP</span>
+          <strong id="hpValue">100</strong>
+          <div class="meter"><i id="hpBar"></i></div>
+        </div>
+        <div class="hud-stat">
+          <span>Shield</span>
+          <strong id="shieldValue">0</strong>
+        </div>
+        <div class="hud-stat">
+          <span>Charge</span>
+          <strong id="chargeValue">0</strong>
+        </div>
+        <div class="hud-stat">
+          <span>Score</span>
+          <strong id="scoreValue">0</strong>
+        </div>
+      </div>
+
+      <div class="phase-banner" id="phaseBanner">
+        <div>
+          <span class="phase-tag" id="phaseTag">LOBBY</span>
+          <strong id="roundText">Waiting for teams</strong>
+        </div>
+        <div class="timer" id="timer">--</div>
+      </div>
+
+      <div class="arena-layout">
+        <section class="main-panel">
+          <div id="lobbyPanel" class="panel lobby-panel">
+            <div class="pulse-orb"></div>
+            <h2 id="lobbyTitle">Waiting for an opponent…</h2>
+            <p id="lobbyText">Share the same game code with another team in your class.</p>
+            <div class="team-count" id="teamCount">1 team connected</div>
+          </div>
+
+          <div id="questionPanel" class="panel question-panel hidden">
+            <div class="question-head">
+              <span class="skill-chip" id="skillChip">Skill</span>
+              <span id="answerStatus" class="answer-status"></span>
+            </div>
+            <h2 id="questionPrompt">Question</h2>
+            <div class="expression" id="questionExpression">Expression</div>
+            <div class="option-grid" id="optionGrid"></div>
+            <button id="lockAnswerBtn" class="primary-btn lock-btn" type="button" disabled>LOCK ANSWER</button>
+            <div class="message" id="answerMessage" aria-live="polite"></div>
+          </div>
+
+          <div id="attackPanel" class="panel attack-panel hidden">
+            <div class="reveal-card" id="revealCard"></div>
+            <div class="attack-head">
+              <div>
+                <span class="kicker">BATTLE PHASE</span>
+                <h2>Spend your charge</h2>
+              </div>
+              <div class="target-chip" id="targetChip">No target selected</div>
+            </div>
+            <div class="action-grid">
+              <button class="action-btn" data-action="quick" type="button">
+                <span>⚡ Quick Strike</span><strong>10 charge → 10 damage</strong>
+              </button>
+              <button class="action-btn power" data-action="power" type="button">
+                <span>💥 Power Blast</span><strong>18 charge → 18 damage</strong>
+              </button>
+              <button class="action-btn shield" data-action="shield" type="button">
+                <span>🛡 Shield Up</span><strong>12 charge → +15 shield</strong>
+              </button>
+            </div>
+            <div class="message" id="actionMessage" aria-live="polite"></div>
+          </div>
+
+          <div id="finishedPanel" class="panel finished-panel hidden">
+            <span class="kicker">BATTLE COMPLETE</span>
+            <h2 id="winnerTitle">Final standings</h2>
+            <p>Final ranking uses score first, then remaining HP and correct answers.</p>
+            <div id="podium" class="podium"></div>
+            <button id="leaveButton" class="secondary-btn" type="button">LEAVE ARENA</button>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <section class="panel teams-panel">
+            <div class="panel-title-row">
+              <h3>Battlefield</h3>
+              <span id="onlineCount">0 teams</span>
+            </div>
+            <div id="teamsList" class="teams-list"></div>
+          </section>
+
+          <section class="panel feed-panel">
+            <div class="panel-title-row">
+              <h3>Battle feed</h3>
+              <span>live</span>
+            </div>
+            <div id="eventFeed" class="event-feed" aria-live="polite"></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <div id="damageLayer" class="damage-layer" aria-hidden="true"></div>
+  </main>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
