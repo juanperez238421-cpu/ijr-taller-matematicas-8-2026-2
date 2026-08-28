@@ -1,0 +1,11 @@
+{
+  "name": "The Fraction Vault · Math Workshop 8",
+  "short_name": "Fraction Vault",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f1",
+  "theme_color": "#101114",
+  "lang": "en",
+  "description": "A classroom game for algebraic fractional expressions, restrictions, factoring, simplification, and operations."
+}
