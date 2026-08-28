@@ -1,0 +1,10 @@
+{
+  "name": "Fraction Arena · Math Workshop 8",
+  "short_name": "Fraction Arena",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#080a10",
+  "theme_color": "#090b12",
+  "description": "Live Grade 8 algebra battle game with synchronized solve and attack rounds.",
+  "icons": []
+}
